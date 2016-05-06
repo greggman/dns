@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
 using System.Linq;
 using System.Text;
 using System.Net;
@@ -140,32 +139,53 @@ namespace DNS.Server {
     internal class EventEmitter {
         public delegate void Emit();
 
-        private CancellationTokenSource tokenSource;
-        private BlockingCollection<Emit> queue;
+        private System.Object m_queueLock = new System.Object();
+        private AutoResetEvent m_autoEvent = new AutoResetEvent(false);
+        private List<Emit> m_queuedEvents = new List<Emit>();
+        private List<Emit> m_executingEvents = new List<Emit>();
 
         public void Schedule(Emit emit) {
-            if (queue != null) {
-                queue.Add(emit);
+            if (m_queuedEvents != null) {
+                m_queuedEvents.Add(emit);
+                m_autoEvent.Set();
             }
         }
 
         public void Run() {
-            tokenSource = new CancellationTokenSource();
-            queue = new BlockingCollection<Emit>();
-
             (new Thread(() => {
                 try {
                     while (true) {
-                        Emit emit = queue.Take(tokenSource.Token);
-                        emit();
+                        m_autoEvent.WaitOne();
+                        ProcessEvents();
                     }
                 } catch (OperationCanceledException) { }
             })).Start();
         }
 
         public void Stop() {
-            if (tokenSource != null) {
-                tokenSource.Cancel();
+        }
+
+        private void ProcessEvents() {
+            MoveQueuedEventsToExecuting();
+
+            if (m_executingEvents != null) {
+                while (m_executingEvents.Count > 0) {
+                    Emit emit = m_executingEvents[0];
+                    m_executingEvents.RemoveAt(0);
+                    emit();
+                }
+            }
+        }
+
+        private void MoveQueuedEventsToExecuting() {
+            lock(m_queueLock) {
+                if (m_executingEvents != null) {
+                    while (m_queuedEvents.Count > 0) {
+                        Emit e = m_queuedEvents[0];
+                        m_executingEvents.Add(e);
+                        m_queuedEvents.RemoveAt(0);
+                    }
+                }
             }
         }
     }
