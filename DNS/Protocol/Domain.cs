@@ -63,7 +63,7 @@ namespace DNS.Protocol {
             byte[] address = ip.GetAddressBytes();
 
             if (address.Length == 4) {
-                return string.Join(".", address.Reverse().Select(b => b.ToString())) + ".in-addr.arpa";
+                return string.Join(".", address.Reverse().Select(b => b.ToString()).ToArray()) + ".in-addr.arpa";
             }
 
             byte[] nibbles = new byte[address.Length * 2];
@@ -75,7 +75,7 @@ namespace DNS.Protocol {
                 nibbles[j + 1] = b.GetBitValueAt(0, 4);
             }
 
-            return string.Join(".", nibbles.Reverse().Select(b => b.ToString("x"))) + ".ip6.arpa";
+            return string.Join(".", nibbles.Reverse().Select(b => b.ToString("x")).ToArray()) + ".ip6.arpa";
         }
 
         public Domain(string domain) : this(domain.Split('.')) {}
