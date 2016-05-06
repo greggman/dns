@@ -9,7 +9,6 @@ using DNS.Client.RequestResolver;
 namespace DNS.Client {
     public class DnsClient {
         private const int DEFAULT_PORT = 53;
-        private static readonly Random RANDOM = new Random();
 
         private IPEndPoint dns;
         private IRequestResolver resolver;
