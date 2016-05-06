@@ -7,7 +7,7 @@ using DNS.Protocol;
 using DNS.Protocol.ResourceRecords;
 
 namespace DNS.Server {
-    public class MasterFile {
+    public class MasterFile : IQuestionAnswerer {
         private static readonly TimeSpan DEFAULT_TTL = new TimeSpan(0);
 
         private static bool Matches(Domain domain, Domain entry) {

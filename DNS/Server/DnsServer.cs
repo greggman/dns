@@ -21,7 +21,7 @@ namespace DNS.Server {
 
         private volatile bool run = true;
 
-        private MasterFile masterFile;
+        private IQuestionAnswerer questionAnswerer;
 
         private UdpClient udp;
         private EventEmitter emitter;
@@ -30,14 +30,14 @@ namespace DNS.Server {
         public event RequestedEventHandler Requested;
         public event RespondedEventHandler Responded;
 
-        public DnsServer(IPEndPoint endServer) {
+        public DnsServer(IQuestionAnswerer questionAnswerer, IPEndPoint endServer) {
             this.emitter = new EventEmitter();
             this.client = new DnsClient(endServer, new UdpRequestResolver());
-            this.masterFile = new MasterFile();
+            this.questionAnswerer = questionAnswerer;
         }
 
-        public DnsServer(IPAddress endServer, int port = DEFAULT_PORT) : this(new IPEndPoint(endServer, port)) {}
-        public DnsServer(string endServerIp, int port = DEFAULT_PORT) : this(IPAddress.Parse(endServerIp), port) {}
+        public DnsServer(IQuestionAnswerer questionAnswerer, IPAddress endServer, int port = DEFAULT_PORT) : this(questionAnswerer, new IPEndPoint(endServer, port)) {}
+        public DnsServer(IQuestionAnswerer questionAnswerer, string endServerIp, int port = DEFAULT_PORT) : this(questionAnswerer, IPAddress.Parse(endServerIp), port) {}
 
         public void Listen(int port = DEFAULT_PORT) {
             udp = new UdpClient(port);
@@ -94,10 +94,6 @@ namespace DNS.Server {
             }
         }
 
-        public MasterFile MasterFile {
-            get { return masterFile; }
-        }
-
         protected virtual void OnRequested(IRequest request) {
             RequestedEventHandler handlers = Requested;
             if (handlers != null) handlers(request);
@@ -112,7 +108,7 @@ namespace DNS.Server {
             Response response = Response.FromRequest(request);
 
             foreach (Question question in request.Questions) {
-                IList<IResourceRecord> answers = masterFile.Get(question);
+                IList<IResourceRecord> answers = questionAnswerer.Get(question);
 
                 if (answers.Count > 0) {
                     Merge(response.AnswerRecords, answers);
